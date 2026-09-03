@@ -36,6 +36,9 @@ LIMITE_CARACTERES_TRADUCTION = 4500
 COLLECTION = "cb_articles"
 
 # ---------- INITIALISATION FIREBASE ----------
+# La clé de service Firebase est fournie via la variable d'environnement
+# GOOGLE_APPLICATION_CREDENTIALS_JSON (contenu brut du fichier JSON),
+# injectée par le secret GitHub Actions FIREBASE_SERVICE_ACCOUNT.
 def init_firestore():
     if not firebase_admin._apps:
         chemin_credentials = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "service_account.json")
@@ -48,7 +51,7 @@ def hash_url(url):
     return hashlib.sha256(url.encode("utf-8")).hexdigest()
 
 
-# ---------- SCRAPING ----------
+# ---------- SCRAPING (identique à la version locale) ----------
 
 def recuperer_liens_articles():
     reponse = requests.get(URL_LISTE, headers=HEADERS, timeout=15)
@@ -94,7 +97,7 @@ def extraire_date_publication(soup):
 
 
 MOTIFS_ERREUR = [
-    "error 500", "server error", "that's an error", "that's an error",
+    "error 500", "server error", "that's an error", "that’s an error",
     "error 404", "page not found", "404 not found", "access denied",
     "forbidden", "too many requests", "rate limit",
 ]
@@ -169,6 +172,7 @@ def cycle():
         doc_id = hash_url(url)
         doc_ref = db.collection(COLLECTION).document(doc_id)
 
+        # Dédup : si le document existe déjà, on saute cet article
         if doc_ref.get().exists:
             continue
 
@@ -182,6 +186,7 @@ def cycle():
 
             if date_pub is None:
                 print(f"Date introuvable, ignore : {titre}")
+                # On marque quand meme comme traite pour ne pas re-tenter en boucle
                 doc_ref.set({"url": url, "ignore": True, "raison": "date_introuvable"})
                 continue
 
