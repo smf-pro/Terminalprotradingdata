@@ -96,6 +96,21 @@ def extraire_date_publication(soup):
     return None
 
 
+MOTIFS_ERREUR = [
+    "error 500", "server error", "that's an error", "that’s an error",
+    "error 404", "page not found", "404 not found", "access denied",
+    "forbidden", "too many requests", "rate limit",
+]
+
+
+def page_erreur(titre, contenu):
+    """Detecte si le contenu recupere est en fait une page d'erreur
+    (site source temporairement indisponible, lien casse, blocage, etc.)
+    plutot qu'un vrai article."""
+    texte = f"{titre or ''} {contenu or ''}".lower()
+    return any(motif in texte for motif in MOTIFS_ERREUR)
+
+
 def extraire_article(url):
     reponse = requests.get(url, headers=HEADERS, timeout=15)
     reponse.raise_for_status()
@@ -163,6 +178,11 @@ def cycle():
 
         try:
             titre, date_pub, contenu = extraire_article(url)
+
+            if page_erreur(titre, contenu):
+                print(f"Page d'erreur detectee, ignore : {url}")
+                doc_ref.set({"url": url, "ignore": True, "raison": "page_erreur"})
+                continue
 
             if date_pub is None:
                 print(f"Date introuvable, ignore : {titre}")
