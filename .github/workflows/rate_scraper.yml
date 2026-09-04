@@ -1,0 +1,34 @@
+name: Rate Probability Scraper
+
+on:
+  schedule:
+    # Toutes les 30 minutes : le site ne publie ses maj que 1 à 3x/jour,
+    # pas besoin d'un cron aussi fréquent que les autres scrapers.
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}  # permet aussi de le lancer manuellement depuis l'onglet Actions
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout du repo
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Installer les dependances
+        run: pip install -r requirements.txt
+
+      - name: Ecrire la cle de service Firebase
+        run: echo "$FIREBASE_SERVICE_ACCOUNT" > service_account.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Lancer le script d'extraction
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: service_account.json
+        run: python implicite_cloud.py
