@@ -43,9 +43,9 @@ COLLECTION = "ff_news"
 
 # Filtre sur l'impact de la news. Sur ForexFactory, l'icone est une image
 # dont l'URL contient "/impact/ff/high.svg" (rouge), "medium.svg" (orange)
-# ou "low.svg" (jaune). On ne garde ici que rouge + orange (high + medium),
-# les news "low" (jaune) et celles sans icone d'impact sont ignorees.
-NIVEAUX_IMPACT_GARDES = {"high", "medium"}
+# ou "low.svg" (jaune). On garde ici les 3 niveaux renseignes (high, medium,
+# low) ; seules les news SANS icone d'impact du tout sont ignorees.
+NIVEAUX_IMPACT_GARDES = {"high", "medium", "low"}
 
 MOTIFS_ERREUR = [
     "error 500", "server error", "that's an error", "that's an error",
