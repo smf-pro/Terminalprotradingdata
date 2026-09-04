@@ -139,6 +139,7 @@ def recuperer_liens_articles(maintenant):
     soup = BeautifulSoup(reponse.text, "html.parser")
 
     candidats = soup.select(".news-block__item")
+    total_brut = len(candidats)
 
     resultats = []
     for element in candidats:
@@ -185,7 +186,7 @@ def recuperer_liens_articles(maintenant):
             "impact": impact,
         })
 
-    return resultats
+    return resultats, total_brut
 
 
 def decouper_texte(texte, limite=4500):
@@ -223,20 +224,25 @@ def cycle():
     debut_fenetre = maintenant - timedelta(hours=FENETRE_HEURES)
 
     try:
-        toutes_les_news = recuperer_liens_articles(maintenant)
+        toutes_les_news, total_brut = recuperer_liens_articles(maintenant)
     except requests.exceptions.RequestException as e:
         print(f"Erreur lors de la recuperation de la page news : {e}")
         return
 
-    if not toutes_les_news:
+    if total_brut == 0:
         print(
-            "Aucune news trouvee. Les selecteurs CSS doivent probablement "
-            "etre ajustes (voir la note en tete du fichier), ou le contenu "
-            "est charge en JavaScript."
+            "Aucun bloc de news trouve du tout. Les selecteurs CSS doivent "
+            "probablement etre ajustes (voir la note en tete du fichier), "
+            "ou le contenu est charge en JavaScript."
         )
         return
 
-    print(f"{len(toutes_les_news)} news trouvee(s) sur la page.")
+    print(f"{total_brut} bloc(s) de news au total sur la page.")
+    print(f"{len(toutes_les_news)} apres filtre d'impact (high/medium uniquement).")
+
+    if not toutes_les_news:
+        print("Aucune news high/medium sur la page pour le moment.")
+        return
 
     news_ecrites = 0
 
