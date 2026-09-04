@@ -41,6 +41,12 @@ HEADERS = {
 GENERER_VERSION_FR = True
 COLLECTION = "ff_news"
 
+# Filtre sur l'impact de la news. Sur ForexFactory, l'icone est une image
+# dont l'URL contient "/impact/ff/high.svg" (rouge), "medium.svg" (orange)
+# ou "low.svg" (jaune). On ne garde ici que rouge + orange (high + medium),
+# les news "low" (jaune) et celles sans icone d'impact sont ignorees.
+NIVEAUX_IMPACT_GARDES = {"high", "medium"}
+
 MOTIFS_ERREUR = [
     "error 500", "server error", "that's an error", "that's an error",
     "error 404", "page not found", "404 not found", "access denied",
@@ -104,6 +110,29 @@ def extraire_date_publication(element, maintenant):
     return None
 
 
+def extraire_impact(element):
+    """
+    Determine le niveau d'impact d'une news a partir de l'icone presente
+    dans le bloc .news-block__details, ex :
+        <img src="https://www.forexfactory.com/resources/svg/images/impact/ff/high.svg">
+    Retourne "high", "medium", "low", ou None si aucune icone d'impact
+    n'est presente (certaines news n'en ont pas).
+    """
+    details = element.select_one(".news-block__details")
+    if not details:
+        return None
+
+    icone = details.select_one("img[src*='/impact/ff/']")
+    if not icone or not icone.get("src"):
+        return None
+
+    src = icone["src"].lower()
+    for niveau in ("high", "medium", "low"):
+        if f"/impact/ff/{niveau}" in src:
+            return niveau
+    return None
+
+
 def recuperer_liens_articles(maintenant):
     reponse = requests.get(URL_LISTE, headers=HEADERS, timeout=15)
     reponse.raise_for_status()
@@ -139,6 +168,13 @@ def recuperer_liens_articles(maintenant):
         extrait = preview_tag.get_text(strip=True) if preview_tag else ""
 
         date_pub = extraire_date_publication(element, maintenant)
+        impact = extraire_impact(element)
+
+        # On ne garde que les news avec impact rouge (high) ou orange
+        # (medium). Les autres (low / sans icone) sont ignorees ici, avant
+        # meme d'entrer dans la logique de fenetre 24h / deja_vus.
+        if impact not in NIVEAUX_IMPACT_GARDES:
+            continue
 
         resultats.append({
             "titre": titre,
@@ -146,6 +182,7 @@ def recuperer_liens_articles(maintenant):
             "source": source,
             "extrait": extrait,
             "date_pub": date_pub,
+            "impact": impact,
         })
 
     return resultats
@@ -235,6 +272,7 @@ def cycle():
             "titre": news["titre"],
             "titre_fr": titre_fr,
             "source": news["source"],
+            "impact": news["impact"],
             "extrait": news["extrait"] if news["extrait"] else "(Pas d'extrait disponible)",
             "extrait_fr": extrait_fr,
             "date_publication": news["date_pub"],
